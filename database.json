@@ -1,0 +1,205 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "email": "thisisashish7@gmail.com",
+      "username": "password123",
+      "password": "password123"
+    }
+  ],
+  "admins": [
+    {
+      "id": 1,
+      "email": "admin@guitar.com",
+      "password": "admin123",
+      "name": "Admin"
+    }
+  ],
+  "guitars": [
+    {
+      "id": 1,
+      "name": "Fender Stratocaster Classic",
+      "category": "Electric",
+      "price": 168999,
+      "quantity": 5,
+      "image": "/images/guitar1.jpg",
+      "description": "Iconic electric guitar with timeless design",
+      "brand": "Fender",
+      "year": "1965"
+    },
+    {
+      "id": 2,
+      "name": "Gibson Les Paul Standard",
+      "category": "Electric",
+      "price": 259999,
+      "quantity": 0,
+      "image": "/images/guitar2.jpg",
+      "description": "Premium electric guitar with warm tone",
+      "brand": "Gibson",
+      "year": "1959"
+    },
+    {
+      "id": 3,
+      "name": "Taylor 814ce",
+      "category": "Acoustic",
+      "price": 415999,
+      "quantity": 2,
+      "image": "/images/guitar3.jpg",
+      "description": "High-end acoustic guitar with exceptional clarity",
+      "brand": "Taylor",
+      "year": "2023"
+    },
+    {
+      "id": 4,
+      "name": "Martin D-45",
+      "category": "Acoustic",
+      "price": 389999,
+      "quantity": 3,
+      "image": "/images/guitar4.jpg",
+      "description": "Legendary dreadnought acoustic guitar",
+      "brand": "Martin",
+      "year": "1933"
+    },
+    {
+      "id": 5,
+      "name": "Ibanez JEM77P",
+      "category": "Electric",
+      "price": 207999,
+      "quantity": 6,
+      "image": "/images/guitar5.jpg",
+      "description": "Signature model with unique design",
+      "brand": "Ibanez",
+      "year": "1990"
+    },
+    {
+      "id": 6,
+      "name": "PRS Custom 24",
+      "category": "Electric",
+      "price": 584999,
+      "quantity": 2,
+      "image": "/images/guitar6.jpg",
+      "description": "Handcrafted excellence in every detail",
+      "brand": "PRS",
+      "year": "1985"
+    },
+    {
+      "id": 7,
+      "name": "Epiphone SG",
+      "category": "Electric",
+      "price": 58499,
+      "quantity": 8,
+      "image": "/images/guitar7.jpg",
+      "description": "Affordable solid-body electric guitar",
+      "brand": "Epiphone",
+      "year": "1961"
+    },
+    {
+      "id": 8,
+      "name": "Yamaha LL16",
+      "category": "Acoustic",
+      "price": 259999,
+      "quantity": 3,
+      "image": "/images/guitar8.jpg",
+      "description": "Reliable acoustic guitar for professionals",
+      "brand": "Yamaha",
+      "year": "2000"
+    },
+    {
+      "id": 9,
+      "name": "Fender Jazzmaster Vintage",
+      "category": "Electric",
+      "price": 233999,
+      "quantity": 2,
+      "image": "/images/guitar9.jpg",
+      "description": "Vintage-style offset electric guitar",
+      "brand": "Fender",
+      "year": "1958"
+    },
+    {
+      "id": 10,
+      "name": "Guild D-40 Traditional",
+      "category": "Acoustic",
+      "price": 376999,
+      "quantity": 1,
+      "image": "/images/guitar10.jpg",
+      "description": "Premium crafted acoustic masterpiece",
+      "brand": "Guild",
+      "year": "1953"
+    }
+  ],
+  "orders": [
+    {
+      "id": 1,
+      "user_id": 1,
+      "items": [
+        {
+          "product_id": 2,
+          "name": "Gibson Les Paul Standard",
+          "price": 259999,
+          "quantity": 1,
+          "subtotal": 259999
+        }
+      ],
+      "total": 259999,
+      "status": "completed"
+    },
+    {
+      "id": 2,
+      "user_id": 1,
+      "items": [],
+      "total": 0,
+      "status": "completed"
+    },
+    {
+      "id": 3,
+      "user_id": 1,
+      "items": [],
+      "total": 0,
+      "status": "completed"
+    },
+    {
+      "id": 4,
+      "user_id": 1,
+      "items": [],
+      "total": 0,
+      "status": "completed"
+    },
+    {
+      "id": 5,
+      "user_id": 1,
+      "items": [],
+      "total": 0,
+      "status": "completed"
+    },
+    {
+      "id": 6,
+      "user_id": 1,
+      "items": [
+        {
+          "product_id": 2,
+          "name": "Gibson Les Paul Standard",
+          "price": 259999,
+          "quantity": 2,
+          "subtotal": 519998
+        }
+      ],
+      "total": 519998,
+      "status": "completed"
+    },
+    {
+      "id": 7,
+      "user_id": 1,
+      "items": [
+        {
+          "product_id": 4,
+          "name": "Martin D-45",
+          "price": 389999,
+          "quantity": 1,
+          "subtotal": 389999
+        }
+      ],
+      "total": 389999,
+      "status": "completed"
+    }
+  ]
+}
