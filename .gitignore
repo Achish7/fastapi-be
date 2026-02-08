@@ -1,3 +1,9 @@
+
+# frontend
+react-fe/node_modules/
+react-fe/dist/
+
+# backend
 venv/
 __pycache__/
 *.pyc
