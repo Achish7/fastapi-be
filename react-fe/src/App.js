@@ -16,7 +16,7 @@ import AdminOrders from "./pages/AdminOrders";
 import AdminUsers from "./pages/AdminUsers";
 
 function App() {
-  const [mode, setMode] = useState("customer"); // "customer" or "admin"
+  const [mode, setMode] = useState("customer");
   const [currentPage, setCurrentPage] = useState("home");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
@@ -25,12 +25,10 @@ function App() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [adminUser, setAdminUser] = useState(null);
 
-  // Restore user session from localStorage and fetch products on mount
   useEffect(() => {
-    // Restore user session if exists
     const savedUser = localStorage.getItem("currentUser");
     const savedCart = localStorage.getItem("cart");
-    
+
     if (savedUser) {
       try {
         const user = JSON.parse(savedUser);
@@ -41,7 +39,7 @@ function App() {
         localStorage.removeItem("currentUser");
       }
     }
-    
+
     if (savedCart) {
       try {
         const cartItems = JSON.parse(savedCart);
@@ -51,7 +49,7 @@ function App() {
         localStorage.removeItem("cart");
       }
     }
-    
+
     fetchProducts();
   }, []);
 
@@ -62,7 +60,6 @@ function App() {
       .catch((error) => console.error("Error fetching products:", error));
   };
 
-  // Save cart to localStorage whenever it changes
   useEffect(() => {
     if (cart.length > 0) {
       localStorage.setItem("cart", JSON.stringify(cart));
@@ -152,6 +149,7 @@ function App() {
     }
   };
 
+  // ✅ FIXED: Just navigate to checkout page, let Checkout.js handle the API call
   const handleCheckout = () => {
     if (!currentUser) {
       alert("Please log in first!");
@@ -164,26 +162,7 @@ function App() {
       return;
     }
 
-    const cartItems = cart.map((item) => ({
-      product_id: item.id,
-      quantity: item.quantity,
-    }));
-
-    axios
-      .post("http://localhost:8000/checkout", {
-        user_id: currentUser.id,
-        cart_items: cartItems,
-      })
-      .then(({ data }) => {
-        if (data.success) {
-          alert("Order placed successfully!");
-          setCart([]);
-          setCurrentPage("profile");
-        } else {
-          alert(data.message);
-        }
-      })
-      .catch(() => alert("Checkout failed!"));
+    setCurrentPage("checkout");
   };
 
   const handleViewProduct = (product) => {
@@ -244,7 +223,6 @@ function App() {
           </div>
         </>
       ) : mode === "admin" && !adminUser ? (
-        // Admin auth screen
         <AdminAuth onAdminLogin={handleAdminLogin} />
       ) : (
         /* CUSTOMER MODE */
@@ -298,11 +276,14 @@ function App() {
                   onCheckout={handleCheckout}
                 />
               )}
+              {/* ✅ FIXED: userId passed, cart cleared from localStorage on complete */}
               {currentPage === "checkout" && (
                 <Checkout
                   cartItems={cart}
+                  userId={currentUser.id}
                   onComplete={() => {
                     setCart([]);
+                    localStorage.removeItem("cart");
                     setCurrentPage("profile");
                   }}
                 />

@@ -1,0 +1,229 @@
+{
+    "intents": [
+      {
+        "tag": "greeting",
+        "patterns": [
+          "hello", "hi", "hey", "namaste", "good morning", "good evening",
+          "good afternoon", "howdy", "what's up", "sup", "hiya"
+        ],
+        "responses": [
+          "Hey there! 🎸 Welcome to GuitarHub! How can I help you today?",
+          "Hello! Looking for your perfect guitar? I'm here to help!",
+          "Hi! Welcome to GuitarHub. Ask me anything about our guitars!"
+        ]
+      },
+      {
+        "tag": "goodbye",
+        "patterns": [
+          "bye", "goodbye", "see you", "take care", "later", "quit", "exit", "thanks bye"
+        ],
+        "responses": [
+          "Goodbye! Rock on! 🎸",
+          "See you later! Come back anytime!",
+          "Take care! Happy playing! 🎵"
+        ]
+      },
+      {
+        "tag": "thanks",
+        "patterns": [
+          "thank you", "thanks", "thank you so much", "thanks a lot", "appreciate it", "thx"
+        ],
+        "responses": [
+          "You're welcome! 😊 Anything else I can help with?",
+          "Happy to help! Let me know if you need anything else.",
+          "Anytime! Feel free to ask more questions!"
+        ]
+      },
+      {
+        "tag": "products",
+        "patterns": [
+          "show guitars", "available guitars", "what guitars do you have",
+          "show me your collection", "what do you sell", "list guitars",
+          "what products", "show products", "guitar collection", "all guitars"
+        ],
+        "responses": [
+          "We have a wide collection of Electric and Acoustic guitars! 🎸 Click 'Start Shopping' to browse all guitars.",
+          "Our collection includes guitars from Fender, Gibson, Taylor, Martin, Ibanez, PRS and more! Visit our shop to see all products.",
+          "We carry both Electric and Acoustic guitars from top brands. Check out our shop section for the full collection!"
+        ]
+      },
+      {
+        "tag": "electric_guitars",
+        "patterns": [
+          "electric guitar", "electric guitars", "show electric", "best electric guitar",
+          "electric guitar recommendation", "which electric guitar", "electric guitar price"
+        ],
+        "responses": [
+          "Our electric guitars include: Fender Stratocaster, Gibson Les Paul, Ibanez JEM77P, PRS Custom 24, Epiphone SG and Fender Jazzmaster! 🎸",
+          "We have amazing electric guitars starting from Rs. 58,499! Popular choices are Fender Stratocaster and Gibson Les Paul.",
+          "Top electric guitar picks: Fender Stratocaster (Rs. 1,68,999), Gibson Les Paul (Rs. 2,59,999), PRS Custom 24 (Rs. 5,84,999)!"
+        ]
+      },
+      {
+        "tag": "acoustic_guitars",
+        "patterns": [
+          "acoustic guitar", "acoustic guitars", "show acoustic", "best acoustic guitar",
+          "acoustic guitar recommendation", "which acoustic guitar", "acoustic guitar price"
+        ],
+        "responses": [
+          "Our acoustic guitars include: Taylor 814ce, Martin D-45, Yamaha LL16 and Guild D-40! 🎵",
+          "We have premium acoustic guitars starting from Rs. 2,59,999! Taylor and Martin are our most popular acoustic brands.",
+          "Top acoustic picks: Taylor 814ce (Rs. 4,15,999), Martin D-45 (Rs. 3,89,999), Guild D-40 (Rs. 3,76,999)!"
+        ]
+      },
+      {
+        "tag": "brands",
+        "patterns": [
+          "what brands", "which brands", "brand list", "guitar brands",
+          "do you have fender", "do you have gibson", "do you have taylor",
+          "available brands", "brands available"
+        ],
+        "responses": [
+          "We carry top guitar brands: Fender, Gibson, Taylor, Martin, Ibanez, PRS, Epiphone, Yamaha and Guild! 🎸",
+          "Our brand lineup includes Fender, Gibson, Taylor, Martin, Ibanez, PRS, Epiphone, Yamaha, and Guild — all authentic!",
+          "We stock guitars from 9 world-class brands: Fender, Gibson, Taylor, Martin, Ibanez, PRS, Epiphone, Yamaha and Guild!"
+        ]
+      },
+      {
+        "tag": "fender",
+        "patterns": [
+          "fender", "fender guitar", "fender stratocaster", "fender jazzmaster",
+          "fender price", "do you have fender", "fender guitars"
+        ],
+        "responses": [
+          "We have 2 Fender guitars: Fender Stratocaster Classic (Rs. 1,68,999) and Fender Jazzmaster Vintage (Rs. 2,33,999)! 🎸",
+          "Fender Stratocaster Classic — an iconic electric guitar from 1965 at Rs. 1,68,999. Also check out the Fender Jazzmaster Vintage at Rs. 2,33,999!"
+        ]
+      },
+      {
+        "tag": "gibson",
+        "patterns": [
+          "gibson", "gibson guitar", "gibson les paul", "les paul",
+          "gibson price", "do you have gibson"
+        ],
+        "responses": [
+          "We carry the Gibson Les Paul Standard — a premium electric guitar with warm tone, priced at Rs. 2,59,999! 🎸",
+          "Gibson Les Paul Standard (1959) is available at Rs. 2,59,999. Only 3 in stock — grab it fast!"
+        ]
+      },
+      {
+        "tag": "price",
+        "patterns": [
+          "price", "how much", "cost", "pricing", "what is the price",
+          "cheapest guitar", "most expensive", "budget guitar", "affordable guitar",
+          "price range", "how much does it cost"
+        ],
+        "responses": [
+          "Our guitars range from Rs. 58,499 (Epiphone SG) to Rs. 5,84,999 (PRS Custom 24). There's something for every budget! 💰",
+          "Budget option: Epiphone SG at Rs. 58,499. Mid-range: Fender Stratocaster at Rs. 1,68,999. Premium: PRS Custom 24 at Rs. 5,84,999!",
+          "We have guitars for all budgets! Entry level from Rs. 58,499, mid-range from Rs. 1,68,999, and premium up to Rs. 5,84,999."
+        ]
+      },
+      {
+        "tag": "order_status",
+        "patterns": [
+          "my order", "check order", "order status", "where is my order",
+          "track order", "order tracking", "did my order go through"
+        ],
+        "responses": [
+          "To check your order status, please log in to your account and go to Order History! 📦",
+          "You can track your orders by logging in and visiting the Orders section in your profile.",
+          "Login to your account and check the Order History section to see all your orders and their status!"
+        ]
+      },
+      {
+        "tag": "how_to_order",
+        "patterns": [
+          "how to order", "how to buy", "how to purchase", "place order",
+          "buying process", "how do i buy", "checkout process", "add to cart"
+        ],
+        "responses": [
+          "Ordering is easy! 🛒 Browse guitars → Add to Cart → Checkout → Done! You need to be logged in to place an order.",
+          "To buy: 1) Browse our collection 2) Click on a guitar 3) Add to Cart 4) Go to Checkout 5) Confirm your order!",
+          "Simply browse, add your favorite guitar to the cart, and proceed to checkout. Make sure you're logged in first!"
+        ]
+      },
+      {
+        "tag": "signup_login",
+        "patterns": [
+          "how to signup", "how to login", "create account", "register",
+          "sign up", "log in", "make account", "new account"
+        ],
+        "responses": [
+          "Click the 'Login' button at the top to sign in, or 'Sign Up' to create a new account — it's free and quick! 😊",
+          "Creating an account is easy! Click Sign Up, enter your name, email and password and you're good to go!",
+          "You can sign up with just your email and password. Click the Login/Signup button to get started!"
+        ]
+      },
+      {
+        "tag": "shipping",
+        "patterns": [
+          "shipping", "delivery", "how long delivery", "shipping time",
+          "when will i get", "fast delivery", "delivery time", "ship to"
+        ],
+        "responses": [
+          "We offer fast shipping! 🚚 Delivery usually takes 3-7 business days depending on your location.",
+          "All orders are shipped quickly and securely. Expect delivery within 3-7 business days!",
+          "We deliver across the country! Standard delivery takes 3-7 business days. All guitars are carefully packaged."
+        ]
+      },
+      {
+        "tag": "warranty",
+        "patterns": [
+          "warranty", "guarantee", "return policy", "refund", "exchange",
+          "is it authentic", "original guitar", "genuine"
+        ],
+        "responses": [
+          "All our guitars are 100% authentic and come with manufacturer warranty! ✅",
+          "We guarantee all instruments are genuine with full warranty. Not satisfied? Contact our support team!",
+          "Every guitar we sell is authentic with warranty included. We stand behind the quality of every instrument!"
+        ]
+      },
+      {
+        "tag": "contact",
+        "patterns": [
+          "contact", "support", "help", "customer service", "talk to human",
+          "email", "phone number", "reach you", "contact support"
+        ],
+        "responses": [
+          "You can reach our support team at support@guitarhub.com 📧 We respond within 24 hours!",
+          "Need help? Email us at support@guitarhub.com or use the contact form. We're here to help!",
+          "Our support team is available Mon-Sat 9AM-6PM. Email: support@guitarhub.com 😊"
+        ]
+      },
+      {
+        "tag": "best_guitar",
+        "patterns": [
+          "best guitar", "recommend a guitar", "which guitar should i buy",
+          "guitar for beginner", "beginner guitar", "guitar for professional",
+          "good guitar", "top guitar", "popular guitar"
+        ],
+        "responses": [
+          "For beginners, I recommend the Epiphone SG at Rs. 58,499 — great quality at an affordable price! 🎸",
+          "Best for beginners: Epiphone SG (Rs. 58,499). Best mid-range: Fender Stratocaster (Rs. 1,68,999). Best premium: PRS Custom 24 (Rs. 5,84,999)!",
+          "It depends on your budget and style! Beginners: Epiphone SG. Intermediate: Fender or Ibanez. Pro: Gibson Les Paul or PRS Custom 24!"
+        ]
+      },
+      {
+        "tag": "stock",
+        "patterns": [
+          "in stock", "available", "out of stock", "how many left",
+          "is it available", "stock available", "quantity"
+        ],
+        "responses": [
+          "Stock levels vary by product. Visit the shop page to see real-time availability for each guitar! 📦",
+          "You can check current stock on each product page. Some guitars are limited — grab yours before they're gone!",
+          "We update stock in real time. Check the product page for current availability. Limited stock on premium models!"
+        ]
+      },
+      {
+        "tag": "fallback",
+        "patterns": [],
+        "responses": [
+          "I'm not sure I understand that. Try asking about our guitars, prices, brands, or how to place an order! 🎸",
+          "Hmm, I didn't quite get that. You can ask me about guitar prices, brands, ordering, or shipping!",
+          "I'm still learning! Try asking: 'What guitars do you have?' or 'How do I place an order?' 😊"
+        ]
+      }
+    ]
+  }
