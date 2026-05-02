@@ -1,62 +1,57 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { Users, UserX } from "lucide-react";
+import LoadingSpinner from "../components/LoadingSpinner";
+import EmptyState from "../components/EmptyState";
 
 export default function AdminUsers() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchStats();
+    axios.get("http://localhost:8000/admin/stats")
+      .then(({ data }) => { setStats(data); setLoading(false); })
+      .catch(() => setLoading(false));
   }, []);
 
-  const fetchStats = () => {
-    axios
-      .get("http://localhost:8000/admin/stats")
-      .then(({ data }) => {
-        setStats(data);
-        setLoading(false);
-      })
-      .catch((error) => {
-        console.error("Error fetching stats:", error);
-        setLoading(false);
-      });
-  };
-
-  if (loading) return <div className="admin-content">Loading...</div>;
-  if (!stats) return <div className="admin-content">Failed to load users</div>;
+  if (loading) return <LoadingSpinner message="Loading users…" />;
+  if (!stats)  return <div className="admin-error">Failed to load users.</div>;
 
   return (
     <div className="admin-users">
-      <h1>👥 User Management</h1>
-
-      <div className="users-stats">
-        <div className="stat-summary">
-          <span>Total Users: {stats.total_users}</span>
+      <div className="admin-header">
+        <div>
+          <h1>User Management</h1>
+          <p className="admin-subhead">{stats.total_users} registered user{stats.total_users !== 1 ? "s" : ""}</p>
+        </div>
+        <div className="stat-card-mini">
+          <Users size={18} />
+          <span>{stats.total_users} Users</span>
         </div>
       </div>
 
       {stats.users.length === 0 ? (
-        <div className="no-data">
-          <p>No registered users yet</p>
-        </div>
+        <EmptyState icon={<UserX size={52} strokeWidth={1} />} title="No users yet" description="Registered users will appear here." />
       ) : (
-        <div className="users-table-container">
+        <div className="admin-table-wrap">
           <table className="admin-table">
             <thead>
-              <tr>
-                <th>User ID</th>
-                <th>Username</th>
-                <th>Email</th>
-                <th>Joined</th>
-              </tr>
+              <tr><th>#</th><th>User</th><th>Email</th><th>Joined</th></tr>
             </thead>
             <tbody>
-              {stats.users.map((user) => (
+              {stats.users.map(user => (
                 <tr key={user.id}>
-                  <td>#{user.id}</td>
-                  <td className="username">{user.username}</td>
-                  <td className="email">{user.email}</td>
-                  <td>Recently</td>
+                  <td><span className="mono">#{user.id}</span></td>
+                  <td>
+                    <div className="user-cell">
+                      <div className="user-avatar-sm">
+                        {user.username?.charAt(0).toUpperCase()}
+                      </div>
+                      <span className="username">{user.username}</span>
+                    </div>
+                  </td>
+                  <td className="email-cell">{user.email}</td>
+                  <td><span className="recently-badge">Recently</span></td>
                 </tr>
               ))}
             </tbody>

@@ -1,6 +1,8 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
 import "./App.css";
+import { ToastProvider } from "./components/Toast";
+import { Music2, LayoutDashboard, Package, ClipboardList, Users, LogOut } from "lucide-react";
 import Navbar from "./components/Navbar";
 import Home from "./pages/Home";
 import ProductCatalog from "./pages/ProductCatalog";
@@ -171,43 +173,38 @@ function App() {
   };
 
   return (
+    <ToastProvider>
     <div className="app">
       {/* ADMIN MODE */}
       {mode === "admin" && adminUser ? (
         <>
           <div className="admin-navbar">
             <div className="admin-navbar-container">
-              <div className="admin-logo">🎸 GuitarHub Admin</div>
+              <div className="admin-logo">
+                <Music2 size={18} />
+                GuitarHub Admin
+              </div>
               <div className="admin-menu">
-                <button
-                  className={`admin-menu-btn ${currentPage === "admin-dashboard" ? "active" : ""}`}
-                  onClick={() => setCurrentPage("admin-dashboard")}
-                >
-                  Dashboard
+                <button className={`admin-menu-btn ${currentPage === "admin-dashboard" ? "active" : ""}`} onClick={() => setCurrentPage("admin-dashboard")}>
+                  <LayoutDashboard size={15} /> Dashboard
                 </button>
-                <button
-                  className={`admin-menu-btn ${currentPage === "admin-products" ? "active" : ""}`}
-                  onClick={() => setCurrentPage("admin-products")}
-                >
-                  Products
+                <button className={`admin-menu-btn ${currentPage === "admin-products" ? "active" : ""}`} onClick={() => setCurrentPage("admin-products")}>
+                  <Package size={15} /> Products
                 </button>
-                <button
-                  className={`admin-menu-btn ${currentPage === "admin-orders" ? "active" : ""}`}
-                  onClick={() => setCurrentPage("admin-orders")}
-                >
-                  Orders
+                <button className={`admin-menu-btn ${currentPage === "admin-orders" ? "active" : ""}`} onClick={() => setCurrentPage("admin-orders")}>
+                  <ClipboardList size={15} /> Orders
                 </button>
-                <button
-                  className={`admin-menu-btn ${currentPage === "admin-users" ? "active" : ""}`}
-                  onClick={() => setCurrentPage("admin-users")}
-                >
-                  Users
+                <button className={`admin-menu-btn ${currentPage === "admin-users" ? "active" : ""}`} onClick={() => setCurrentPage("admin-users")}>
+                  <Users size={15} /> Users
                 </button>
               </div>
               <div className="admin-info">
-                <span>Admin: {adminUser.name}</span>
+                <div className="admin-user-chip">
+                  <div className="admin-avatar">{adminUser.name?.charAt(0).toUpperCase()}</div>
+                  <span>{adminUser.name}</span>
+                </div>
                 <button className="admin-logout-btn" onClick={handleAdminLogout}>
-                  Logout
+                  <LogOut size={14} /> Logout
                 </button>
               </div>
             </div>
@@ -296,6 +293,7 @@ function App() {
         </>
       )}
     </div>
+    </ToastProvider>
   );
 }
 

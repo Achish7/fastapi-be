@@ -1,303 +1,181 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { Plus, Pencil, Trash2, AlertCircle, Music2, X } from "lucide-react";
+import LoadingSpinner from "../components/LoadingSpinner";
+
+const BLANK = { name: "", price: "", quantity: "", category: "Electric", description: "", brand: "" };
 
 export default function AdminProducts() {
   const [products, setProducts] = useState([]);
-  const [showAddForm, setShowAddForm] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [formData, setFormData] = useState({
-    name: "",
-    price: "",
-    quantity: "",
-    category: "Electric",
-    description: "",
-    brand: "",
-  });
+  const [formData, setFormData] = useState(BLANK);
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
+  useEffect(() => { fetchProducts(); }, []);
 
   const fetchProducts = () => {
-    axios
-      .get("http://localhost:8000/admin/products")
-      .then(({ data }) => {
-        setProducts(data);
-        setLoading(false);
-      })
-      .catch((error) => {
-        console.error("Error fetching products:", error);
-        setLoading(false);
-      });
+    axios.get("http://localhost:8000/admin/products")
+      .then(({ data }) => { setProducts(data); setLoading(false); })
+      .catch(() => setLoading(false));
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+  const handleChange = e => setFormData(p => ({ ...p, [e.target.name]: e.target.value }));
 
-  const handleAddProduct = (e) => {
+  const resetForm = () => { setFormData(BLANK); setShowForm(false); setEditingId(null); };
+
+  const handleSubmit = e => {
     e.preventDefault();
-
-    axios
-      .post("http://localhost:8000/admin/products", {
-        name: formData.name,
-        price: parseFloat(formData.price),
-        quantity: parseInt(formData.quantity),
-        category: formData.category,
-        description: formData.description,
-        brand: formData.brand,
-        image: "🎸",
-        year: new Date().getFullYear().toString(),
-      })
-      .then(({ data }) => {
-        if (data.success) {
-          setProducts([...products, data.product]);
-          setFormData({
-            name: "",
-            price: "",
-            quantity: "",
-            category: "Electric",
-            description: "",
-            brand: "",
-          });
-          setShowAddForm(false);
-          alert("Product added successfully!");
-        }
-      })
-      .catch(() => alert("Failed to add product"));
+    const payload = {
+      ...formData,
+      price: parseFloat(formData.price),
+      quantity: parseInt(formData.quantity),
+    };
+    if (editingId) {
+      axios.put(`http://localhost:8000/admin/products/${editingId}`, payload)
+        .then(({ data }) => {
+          if (data.success) { setProducts(ps => ps.map(p => p.id === editingId ? data.product : p)); resetForm(); }
+        }).catch(() => alert("Failed to update product"));
+    } else {
+      axios.post("http://localhost:8000/admin/products", { ...payload, image: "🎸", year: String(new Date().getFullYear()) })
+        .then(({ data }) => {
+          if (data.success) { setProducts(ps => [...ps, data.product]); resetForm(); }
+        }).catch(() => alert("Failed to add product"));
+    }
   };
 
-  const handleUpdateProduct = (id) => {
-    const product = products.find((p) => p.id === id);
-    if (!product) return;
-
+  const handleEdit = id => {
+    const p = products.find(p => p.id === id);
+    if (!p) return;
     setEditingId(id);
-    setFormData({
-      name: product.name,
-      price: product.price,
-      quantity: product.quantity,
-      category: product.category,
-      description: product.description,
-      brand: product.brand,
-    });
-    setShowAddForm(true);
+    setFormData({ name: p.name, price: p.price, quantity: p.quantity, category: p.category, description: p.description, brand: p.brand });
+    setShowForm(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleSaveEdit = (e) => {
-    e.preventDefault();
-
-    axios
-      .put(`http://localhost:8000/admin/products/${editingId}`, {
-        name: formData.name,
-        price: parseFloat(formData.price),
-        quantity: parseInt(formData.quantity),
-        category: formData.category,
-        description: formData.description,
-        brand: formData.brand,
-      })
-      .then(({ data }) => {
-        if (data.success) {
-          setProducts(
-            products.map((p) => (p.id === editingId ? data.product : p))
-          );
-          resetForm();
-          alert("Product updated successfully!");
-        }
-      })
-      .catch(() => alert("Failed to update product"));
+  const handleDelete = id => {
+    if (!window.confirm("Delete this product?")) return;
+    axios.delete(`http://localhost:8000/admin/products/${id}`)
+      .then(({ data }) => { if (data.success) setProducts(ps => ps.filter(p => p.id !== id)); })
+      .catch(() => alert("Failed to delete"));
   };
 
-  const handleDeleteProduct = (id) => {
-    if (!window.confirm("Are you sure you want to delete this product?"))
-      return;
-
-    axios
-      .delete(`http://localhost:8000/admin/products/${id}`)
-      .then(({ data }) => {
-        if (data.success) {
-          setProducts(products.filter((p) => p.id !== id));
-          alert("Product deleted successfully!");
-        }
-      })
-      .catch(() => alert("Failed to delete product"));
-  };
-
-  const handleMarkSoldOut = (id) => {
-    if (!window.confirm("Mark this product as sold out?")) return;
-
-    axios
-      .put(`http://localhost:8000/admin/products/${id}/soldout`)
-      .then(({ data }) => {
-        if (data.success) {
-          setProducts(
-            products.map((p) => (p.id === id ? data.product : p))
-          );
-          alert("Product marked as sold out!");
-        }
-      })
+  const handleSoldOut = id => {
+    if (!window.confirm("Mark as sold out?")) return;
+    axios.put(`http://localhost:8000/admin/products/${id}/soldout`)
+      .then(({ data }) => { if (data.success) setProducts(ps => ps.map(p => p.id === id ? data.product : p)); })
       .catch(() => alert("Failed to mark as sold out"));
   };
 
-  const resetForm = () => {
-    setFormData({
-      name: "",
-      price: "",
-      quantity: "",
-      category: "Electric",
-      description: "",
-      brand: "",
-    });
-    setShowAddForm(false);
-    setEditingId(null);
-  };
-
-  if (loading) return <div className="admin-content">Loading...</div>;
+  if (loading) return <LoadingSpinner message="Loading products…" />;
 
   return (
     <div className="admin-products">
       <div className="admin-header">
-        <h1>🎸 Manage Products</h1>
-        <button
-          className="admin-btn-primary"
-          onClick={() => {
-            resetForm();
-            setShowAddForm(true);
-          }}
-        >
-          + Add New Product
+        <div>
+          <h1>Manage Products</h1>
+          <p className="admin-subhead">{products.length} product{products.length !== 1 ? "s" : ""} listed</p>
+        </div>
+        <button className="admin-btn-primary" onClick={() => { resetForm(); setShowForm(true); }}>
+          <Plus size={16} /> Add Product
         </button>
       </div>
 
-      {showAddForm && (
+      {/* Form */}
+      {showForm && (
         <div className="admin-form-container">
-          <form
-            onSubmit={editingId ? handleSaveEdit : handleAddProduct}
-            className="admin-form"
-          >
+          <div className="admin-form-header">
             <h2>{editingId ? "Edit Product" : "Add New Product"}</h2>
-
-            <input
-              type="text"
-              name="name"
-              placeholder="Product Name"
-              value={formData.name}
-              onChange={handleInputChange}
-              required
-            />
-
-            <input
-              type="number"
-              name="price"
-              placeholder="Price"
-              step="0.01"
-              value={formData.price}
-              onChange={handleInputChange}
-              required
-            />
-
-            <input
-              type="number"
-              name="quantity"
-              placeholder="Quantity"
-              value={formData.quantity}
-              onChange={handleInputChange}
-              required
-            />
-
-            <select
-              name="category"
-              value={formData.category}
-              onChange={handleInputChange}
-            >
-              <option value="Electric">Electric</option>
-              <option value="Acoustic">Acoustic</option>
-            </select>
-
-            <input
-              type="text"
-              name="brand"
-              placeholder="Brand"
-              value={formData.brand}
-              onChange={handleInputChange}
-              required
-            />
-
-            <textarea
-              name="description"
-              placeholder="Description"
-              value={formData.description}
-              onChange={handleInputChange}
-              required
-            />
-
-            <div className="form-actions">
-              <button type="submit" className="btn-save">
-                {editingId ? "Update Product" : "Add Product"}
-              </button>
-              <button
-                type="button"
-                className="btn-cancel"
-                onClick={resetForm}
-              >
-                Cancel
-              </button>
+            <button className="form-close-btn" onClick={resetForm}><X size={18} /></button>
+          </div>
+          <form onSubmit={handleSubmit} className="admin-form">
+            <div className="admin-form-grid">
+              <div className="admin-field">
+                <label>Product Name</label>
+                <input type="text" name="name" placeholder="e.g. Fender Stratocaster"
+                  value={formData.name} onChange={handleChange} required />
+              </div>
+              <div className="admin-field">
+                <label>Brand</label>
+                <input type="text" name="brand" placeholder="e.g. Fender"
+                  value={formData.brand} onChange={handleChange} required />
+              </div>
+              <div className="admin-field">
+                <label>Price (Rs)</label>
+                <input type="number" name="price" placeholder="0.00" step="0.01"
+                  value={formData.price} onChange={handleChange} required />
+              </div>
+              <div className="admin-field">
+                <label>Quantity</label>
+                <input type="number" name="quantity" placeholder="0"
+                  value={formData.quantity} onChange={handleChange} required />
+              </div>
+              <div className="admin-field">
+                <label>Category</label>
+                <select name="category" value={formData.category} onChange={handleChange}>
+                  <option value="Electric">Electric</option>
+                  <option value="Acoustic">Acoustic</option>
+                  <option value="Classical">Classical</option>
+                  <option value="Bass">Bass</option>
+                </select>
+              </div>
+            </div>
+            <div className="admin-field" style={{ marginTop: "1rem" }}>
+              <label>Description</label>
+              <textarea name="description" placeholder="Product description…" rows={3}
+                value={formData.description} onChange={handleChange} required />
+            </div>
+            <div className="form-actions" style={{ marginTop: "1.25rem" }}>
+              <button type="submit" className="btn-save">{editingId ? "Update Product" : "Add Product"}</button>
+              <button type="button" className="btn-cancel" onClick={resetForm}>Cancel</button>
             </div>
           </form>
         </div>
       )}
 
-      <div className="products-table-container">
+      {/* Table */}
+      <div className="admin-table-wrap">
         <table className="admin-table">
           <thead>
             <tr>
-              <th>ID</th>
-              <th>Name</th>
-              <th>Brand</th>
-              <th>Category</th>
-              <th>Price</th>
-              <th>Stock</th>
-              <th>Actions</th>
+              <th>#</th><th>Product</th><th>Brand</th><th>Category</th><th>Price</th><th>Stock</th><th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {products.map((product) => (
-              <tr key={product.id} className={product.quantity === 0 ? "sold-out-row" : ""}>
-                <td>#{product.id}</td>
-                <td className="product-name">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-                    <img src={product.image} alt={product.name} className="admin-thumb" onError={(e) => e.currentTarget.src = '/images/fallback.svg'} />
-                    {product.name}
+            {products.map(p => (
+              <tr key={p.id} className={p.quantity === 0 ? "sold-out-row" : ""}>
+                <td><span className="mono">#{p.id}</span></td>
+                <td>
+                  <div className="product-cell">
+                    <div className="admin-thumb-wrap">
+                      <img src={p.image} alt={p.name} className="admin-thumb"
+                        onError={e => { e.currentTarget.style.display = "none"; e.currentTarget.nextSibling.style.display = "flex"; }} />
+                      <span className="admin-thumb-fallback" style={{ display: "none" }}>
+                        <Music2 size={18} strokeWidth={1.5} />
+                      </span>
+                    </div>
+                    <span className="product-name">{p.name}</span>
                   </div>
                 </td>
-                <td>{product.brand}</td>
-                <td>{product.category}</td>
-                <td className="price">Rs {product.price.toFixed(0)}</td>
-                <td className={product.quantity === 0 ? "stock-alert" : ""}>
-                  {product.quantity === 0 ? "SOLD OUT" : product.quantity}
+                <td>{p.brand}</td>
+                <td><span className="category-chip">{p.category}</span></td>
+                <td className="price">Rs {p.price.toLocaleString()}</td>
+                <td>
+                  {p.quantity === 0
+                    ? <span className="stock-alert">Sold Out</span>
+                    : <span className="stock-num">{p.quantity}</span>}
                 </td>
                 <td className="actions">
-                  <button
-                    className="btn-edit"
-                    onClick={() => handleUpdateProduct(product.id)}
-                  >
-                    ✏️
+                  <button className="btn-edit" onClick={() => handleEdit(p.id)} title="Edit">
+                    <Pencil size={14} />
                   </button>
-                  {product.quantity > 0 && (
-                    <button
-                      className="btn-sold-out"
-                      onClick={() => handleMarkSoldOut(product.id)}
-                      title="Mark as sold out"
-                    >
-                      ⛔
+                  {p.quantity > 0 && (
+                    <button className="btn-sold-out" onClick={() => handleSoldOut(p.id)} title="Mark sold out">
+                      <AlertCircle size={14} />
                     </button>
                   )}
-                  <button
-                    className="btn-delete"
-                    onClick={() => handleDeleteProduct(product.id)}
-                  >
-                    🗑️
+                  <button className="btn-delete" onClick={() => handleDelete(p.id)} title="Delete">
+                    <Trash2 size={14} />
                   </button>
                 </td>
               </tr>

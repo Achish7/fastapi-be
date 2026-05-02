@@ -1,91 +1,78 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { ChevronDown, ChevronUp, PackageOpen } from "lucide-react";
+import LoadingSpinner from "../components/LoadingSpinner";
+import EmptyState from "../components/EmptyState";
 
 export default function AdminOrders() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState(null);
 
   useEffect(() => {
-    fetchStats();
+    axios.get("http://localhost:8000/admin/stats")
+      .then(({ data }) => { setStats(data); setLoading(false); })
+      .catch(() => setLoading(false));
   }, []);
 
-  const fetchStats = () => {
-    axios
-      .get("http://localhost:8000/admin/stats")
-      .then(({ data }) => {
-        setStats(data);
-        setLoading(false);
-      })
-      .catch((error) => {
-        console.error("Error fetching stats:", error);
-        setLoading(false);
-      });
-  };
+  if (loading) return <LoadingSpinner message="Loading orders…" />;
+  if (!stats)  return <div className="admin-error">Failed to load orders.</div>;
 
-  if (loading) return <div className="admin-content">Loading...</div>;
-  if (!stats) return <div className="admin-content">Failed to load orders</div>;
+  const orders = [...stats.orders].reverse();
 
   return (
     <div className="admin-orders">
-      <h1>📋 Order Management</h1>
-
-      {stats.orders.length === 0 ? (
-        <div className="no-data">
-          <p>No orders yet</p>
+      <div className="admin-header">
+        <div>
+          <h1>Order Management</h1>
+          <p className="admin-subhead">{orders.length} order{orders.length !== 1 ? "s" : ""} total</p>
         </div>
+      </div>
+
+      {orders.length === 0 ? (
+        <EmptyState icon={<PackageOpen size={52} strokeWidth={1} />} title="No orders yet" description="Orders will appear here once customers start purchasing." />
       ) : (
-        <div className="orders-table-container">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Order ID</th>
-                <th>User ID</th>
-                <th>Items</th>
-                <th>Total</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {stats.orders.map((order) => (
-                <tr key={order.id}>
-                  <td>#{order.id}</td>
-                  <td>User #{order.user_id}</td>
-                  <td className="order-items-cell">
-                    {order.items.length} item{order.items.length !== 1 ? "s" : ""}
-                  </td>
-                  <td className="price">Rs {order.total.toFixed(0)}</td>
-                  <td>
-                    <span className="status-badge completed">
-                      {order.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="orders-accordion">
+          {orders.map(order => {
+            const open = expanded === order.id;
+            return (
+              <div key={order.id} className={`order-accordion-item ${open ? "open" : ""}`}>
+                <button className="order-accordion-head" onClick={() => setExpanded(open ? null : order.id)}>
+                  <div className="oa-left">
+                    <span className="mono oa-id">#{order.id}</span>
+                    <span className="oa-user">User #{order.user_id}</span>
+                  </div>
+                  <div className="oa-right">
+                    <span className="price oa-total">Rs {order.total.toLocaleString()}</span>
+                    <span className="status-badge status-completed">{order.status}</span>
+                    {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  </div>
+                </button>
+
+                {open && (
+                  <div className="order-accordion-body">
+                    <table className="order-items-table">
+                      <thead>
+                        <tr><th>Item</th><th>Qty</th><th>Unit Price</th><th>Subtotal</th></tr>
+                      </thead>
+                      <tbody>
+                        {(order.items || []).map((item, idx) => (
+                          <tr key={idx}>
+                            <td>{item.name}</td>
+                            <td>{item.quantity}</td>
+                            <td>Rs {item.price?.toLocaleString()}</td>
+                            <td className="price">Rs {item.subtotal?.toLocaleString()}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
-
-      <div className="order-details">
-        <h2>Order Details Summary</h2>
-        {stats.orders.map((order) => (
-          <details key={order.id} className="order-detail">
-            <summary>Order #{order.id} - Rs {order.total.toFixed(0)}</summary>
-            <div className="detail-content">
-              <p><strong>User ID:</strong> {order.user_id}</p>
-              <p><strong>Status:</strong> {order.status}</p>
-              <p><strong>Items Ordered:</strong></p>
-              <ul>
-                {order.items.map((item, idx) => (
-                  <li key={idx}>
-                    {item.name} - Qty: {item.quantity} @ Rs {item.price.toFixed(0)} = Rs {item.subtotal.toFixed(0)}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </details>
-        ))}
-      </div>
     </div>
   );
 }

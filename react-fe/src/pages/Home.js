@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { Star, Truck, ShieldCheck, Headphones, ArrowRight } from "lucide-react";
 
 // ─── Chatbot Component ───────────────────────────────────────────────────────
 function Chatbot() {
@@ -414,22 +415,22 @@ export default function Home({ onShopClick }) {
       <section className="features">
         <div className="features-container">
           <div className="feature-card">
-            <span className="feature-icon">⭐</span>
+            <span className="feature-icon"><Star size={26} strokeWidth={1.5} /></span>
             <h3>Premium Quality</h3>
             <p>Handpicked guitars from renowned brands</p>
           </div>
           <div className="feature-card">
-            <span className="feature-icon">🚚</span>
+            <span className="feature-icon"><Truck size={26} strokeWidth={1.5} /></span>
             <h3>Fast Shipping</h3>
             <p>Quick delivery to your favorite location</p>
           </div>
           <div className="feature-card">
-            <span className="feature-icon">💯</span>
+            <span className="feature-icon"><ShieldCheck size={26} strokeWidth={1.5} /></span>
             <h3>Guaranteed</h3>
             <p>100% authentic instruments with warranty</p>
           </div>
           <div className="feature-card">
-            <span className="feature-icon">🎵</span>
+            <span className="feature-icon"><Headphones size={26} strokeWidth={1.5} /></span>
             <h3>Expert Support</h3>
             <p>Get advice from guitar enthusiasts</p>
           </div>
@@ -440,7 +441,7 @@ export default function Home({ onShopClick }) {
       <section className="cta">
         <h2>Find Your Perfect Guitar Today</h2>
         <button className="cta-btn" onClick={onShopClick}>
-          Explore Our Collection
+          Explore Our Collection <ArrowRight size={16} style={{ marginLeft: 6 }} />
         </button>
       </section>
 

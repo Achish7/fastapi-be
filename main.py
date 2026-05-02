@@ -3,22 +3,98 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import uvicorn
+import logging
+from sqlalchemy import func
 from sqlalchemy.orm import Session
-from models import SessionLocal, User, Admin, Guitar, Order, OrderItem
 from typing import List, Optional
 
-# Safe chatbot import — won't crash server if chatbot fails
+# Configure logging FIRST (before any try/except that uses logger)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+)
+logger = logging.getLogger(__name__)
+
+# --------------------
+# Safe bcrypt import
+# --------------------
+try:
+    import bcrypt
+    BCRYPT_AVAILABLE = True
+except Exception as e:
+    logger.warning(f"⚠️ Bcrypt not loaded, using plain text passwords: {e}")
+    BCRYPT_AVAILABLE = False
+
+# --------------------
+# Safe DB import
+# --------------------
+try:
+    from models import SessionLocal, User, Admin, Guitar, Order, OrderItem, init_db
+    DB_AVAILABLE = True
+except Exception as e:
+    logger.error(f"❌ Database not loaded: {e}")
+    DB_AVAILABLE = False
+
+# --------------------
+# Safe chatbot import
+# --------------------
 try:
     from chatbot.Chatbot import get_response
     CHATBOT_AVAILABLE = True
+    logger.info("✅ Chatbot loaded successfully.")
 except Exception as e:
-    print(f"⚠️ Chatbot not loaded: {e}")
+    logger.warning(f"⚠️ Chatbot not loaded: {e}")
     CHATBOT_AVAILABLE = False
 
 
-app = FastAPI()
+# --------------------
+# Lifespan Context Manager
+# --------------------
 
-# ✅ CORS — allow all origins to fix OPTIONS 400
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Initialize DB tables on startup
+    if DB_AVAILABLE:
+        try:
+            init_db()
+            logger.info("✅ Database initialized on startup.")
+            # Seed default admin if none exists
+            db = SessionLocal()
+            try:
+                if not db.query(Admin).first():
+                    default_admin = Admin(
+                        email="admin@guitar.com",
+                        password=hash_password("admin123"),
+                        name="Admin"
+                    )
+                    db.add(default_admin)
+                    db.commit()
+                    logger.info("✅ Default admin created: admin@guitar.com / admin123")
+            except Exception as seed_err:
+                db.rollback()
+                logger.error(f"❌ Admin seeding failed: {seed_err}")
+            finally:
+                db.close()
+        except Exception as e:
+            logger.error(f"❌ DB initialization failed on startup: {e}")
+    else:
+        logger.error("❌ Skipping DB init — models failed to load.")
+    yield
+
+# --------------------
+# App Setup
+# --------------------
+
+app = FastAPI(
+    title="Guitar Store API",
+    description="Backend API for Guitar Store application",
+    version="1.0.0",
+    lifespan=lifespan
+)
+
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -27,7 +103,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ✅ Manual OPTIONS handler as backup
+# Manual OPTIONS preflight handler as backup
 @app.options("/{rest_of_path:path}")
 async def preflight(request: Request, rest_of_path: str):
     return JSONResponse(
@@ -39,16 +115,24 @@ async def preflight(request: Request, rest_of_path: str):
         }
     )
 
-# Dependency to get DB session
+
+
+# --------------------
+# DB Dependency
+# --------------------
+
 def get_db():
+    if not DB_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Database unavailable")
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
 
+
 # --------------------
-# Pydantic Models
+# Pydantic Schemas
 # --------------------
 
 class ChatRequest(BaseModel):
@@ -103,147 +187,174 @@ class CreateProduct(BaseModel):
     image: str = "🎸"
     year: str = "2024"
 
-class UserResponse(BaseModel):
-    id: int
-    email: str
-    username: str
 
-class AdminResponse(BaseModel):
-    id: int
-    email: str
-    name: str
+# --------------------
+# Helper: serialize models
+# --------------------
 
-class GuitarResponse(BaseModel):
-    id: int
-    name: str
-    category: str
-    price: float
-    quantity: int
-    image: str
-    description: str
-    brand: str
-    year: str
+def guitar_dict(g):
+    return {
+        "id": g.id, "name": g.name, "category": g.category,
+        "price": g.price, "quantity": g.quantity, "image": g.image,
+        "description": g.description, "brand": g.brand, "year": g.year
+    }
 
-class OrderItemResponse(BaseModel):
-    product_id: int
-    name: str
-    price: float
-    quantity: int
-    subtotal: float
+def order_dict(order, items):
+    return {
+        "id": order.id,
+        "user_id": order.user_id,
+        "items": [
+            {
+                "product_id": i.product_id, "name": i.name,
+                "price": i.price, "quantity": i.quantity, "subtotal": i.subtotal
+            } for i in items
+        ],
+        "total": order.total,
+        "status": order.status
+    }
 
-class OrderResponse(BaseModel):
-    id: int
-    user_id: int
-    items: List[OrderItemResponse]
-    total: float
-    status: str
+
+# --------------------
+# Password Helpers
+# --------------------
+
+def hash_password(password: str) -> str:
+    """Hash a password using bcrypt."""
+    if BCRYPT_AVAILABLE:
+        # Encode password to bytes (bcrypt requires bytes)
+        password_bytes = password.encode('utf-8')
+        salt = bcrypt.gensalt()
+        hashed = bcrypt.hashpw(password_bytes, salt)
+        return hashed.decode('utf-8')
+    return password
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify a password against a hash.
+
+    The database may contain unhashed passwords (e.g. legacy or manually
+    inserted records). If verification fails with bcrypt, we fall back to 
+    a direct comparison. This keeps existing data working while the application 
+    can slowly migrate to proper bcrypt hashes.
+    """
+    if BCRYPT_AVAILABLE:
+        try:
+            password_bytes = plain_password.encode('utf-8')
+            hashed_bytes = hashed_password.encode('utf-8')
+            return bcrypt.checkpw(password_bytes, hashed_bytes)
+        except Exception:
+            # unknown format -> assume stored value is plain text
+            logger.warning("Password hash unrecognized, falling back to plain text comparison")
+            return plain_password == hashed_password
+    return plain_password == hashed_password
 
 
 # --------------------
 # Routes
 # --------------------
 
-@app.get("/")
+@app.get("/", tags=["Health"])
 def root():
-    return {"message": "Hello World!"}
-
-
-# CHATBOT
-@app.post("/chat")
-def chat(request: ChatRequest):
-    if not CHATBOT_AVAILABLE:
-        return {"response": "Chatbot is currently unavailable."}
-    response = get_response(request.message)
-    return {"response": response}
-
-
-# AUTH - SIGN UP
-@app.post("/signup")
-def signup(user: CreateUser, db: Session = Depends(get_db)):
-    existing_user = db.query(User).filter(User.email == user.email).first()
-    if existing_user:
-        return {"message": "Email already registered", "success": False}
-    new_user = User(email=user.email, username=user.username, password=user.password)
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-    return {"message": "User created successfully", "success": True, "user": {"id": new_user.id, "email": new_user.email, "username": new_user.username}}
-
-
-# AUTH - LOGIN
-@app.post("/login")
-def login(user: LoginUser, db: Session = Depends(get_db)):
-    existing_user = db.query(User).filter(User.email == user.email, User.password == user.password).first()
-    if existing_user:
-        return {"message": "Login successful", "success": True, "user": {"id": existing_user.id, "email": existing_user.email, "username": existing_user.username}}
-    return {"message": "Invalid email or password", "success": False}
-
-
-# ADMIN - LOGIN
-@app.post("/admin/login")
-def admin_login(admin: AdminLogin, db: Session = Depends(get_db)):
-    existing_admin = db.query(Admin).filter(Admin.email == admin.email, Admin.password == admin.password).first()
-    if existing_admin:
-        return {"message": "Admin login successful", "success": True, "admin": {"id": existing_admin.id, "email": existing_admin.email, "name": existing_admin.name}}
-    return {"message": "Invalid admin credentials", "success": False}
-
-
-# ADMIN - DASHBOARD STATS
-@app.get("/admin/stats")
-def get_admin_stats(db: Session = Depends(get_db)):
-    total_orders = db.query(Order).count()
-    total_revenue = db.query(Order).with_entities(db.func.sum(Order.total)).scalar() or 0
-    total_products = db.query(Guitar).count()
-    total_users = db.query(User).count()
-    orders = db.query(Order).all()
-    users = db.query(User).all()
     return {
-        "total_orders": total_orders,
-        "total_revenue": total_revenue,
-        "total_products": total_products,
-        "total_users": total_users,
-        "orders": [{"id": o.id, "user_id": o.user_id, "total": o.total, "status": o.status} for o in orders],
-        "users": [{"id": u.id, "email": u.email, "username": u.username} for u in users]
+        "message": "Guitar Store API is running 🎸",
+        "db_available": DB_AVAILABLE,
+        "chatbot_available": CHATBOT_AVAILABLE
     }
 
 
-# ADMIN - GET ALL PRODUCTS
-@app.get("/admin/products")
+# --------------------
+# Chatbot
+# --------------------
+
+@app.post("/chat", tags=["Chatbot"])
+def chat(request: ChatRequest):
+    if not CHATBOT_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Chatbot is currently unavailable.")
+    try:
+        response = get_response(request.message)
+        return {"response": response}
+    except Exception as e:
+        logger.error(f"Chatbot error: {e}")
+        raise HTTPException(status_code=500, detail="Chatbot error occurred.")
+
+
+# --------------------
+# Auth
+# --------------------
+
+@app.post("/signup", tags=["Auth"])
+def signup(user: CreateUser, db: Session = Depends(get_db)):
+    if db.query(User).filter(User.email == user.email).first():
+        raise HTTPException(status_code=409, detail="Email already registered")
+
+    hashed_pwd = hash_password(user.password)
+    new_user = User(
+        email=user.email,
+        username=user.username,
+        password=hashed_pwd
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    logger.info(f"New user registered: {new_user.email}")
+    return {
+        "message": "User created successfully",
+        "success": True,
+        "user": {"id": new_user.id, "email": new_user.email, "username": new_user.username}
+    }
+
+
+@app.post("/login", tags=["Auth"])
+def login(user: LoginUser, db: Session = Depends(get_db)):
+    existing_user = db.query(User).filter(User.email == user.email).first()
+    if not existing_user or not verify_password(user.password, existing_user.password):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    return {
+        "message": "Login successful",
+        "success": True,
+        "user": {"id": existing_user.id, "email": existing_user.email, "username": existing_user.username}
+    }
+
+
+# --------------------
+# Admin
+# --------------------
+
+@app.post("/admin/login", tags=["Admin"])
+def admin_login(admin: AdminLogin, db: Session = Depends(get_db)):
+    existing_admin = db.query(Admin).filter(Admin.email == admin.email).first()
+    if not existing_admin or not verify_password(admin.password, existing_admin.password):
+        raise HTTPException(status_code=401, detail="Invalid admin credentials")
+    return {
+        "message": "Admin login successful",
+        "success": True,
+        "admin": {"id": existing_admin.id, "email": existing_admin.email, "name": existing_admin.name}
+    }
+
+
+@app.get("/admin/stats", tags=["Admin"])
+def get_admin_stats(db: Session = Depends(get_db)):
+    total_orders   = db.query(Order).count()
+    total_revenue  = db.query(func.sum(Order.total)).scalar() or 0.0
+    total_products = db.query(Guitar).count()
+    total_users    = db.query(User).count()
+    orders = db.query(Order).all()
+    users  = db.query(User).all()
+    return {
+        "total_orders": total_orders,
+        "total_revenue": round(total_revenue, 2),
+        "total_products": total_products,
+        "total_users": total_users,
+        "orders": [{"id": o.id, "user_id": o.user_id, "total": o.total, "status": o.status} for o in orders],
+        "users":  [{"id": u.id, "email": u.email, "username": u.username} for u in users]
+    }
+
+
+@app.get("/admin/products", tags=["Admin"])
 def admin_get_products(db: Session = Depends(get_db)):
-    guitars = db.query(Guitar).all()
-    return [{"id": g.id, "name": g.name, "category": g.category, "price": g.price, "quantity": g.quantity, "image": g.image, "description": g.description, "brand": g.brand, "year": g.year} for g in guitars]
+    return [guitar_dict(g) for g in db.query(Guitar).all()]
 
 
-# ADMIN - DELETE PRODUCT
-@app.delete("/admin/products/{product_id}")
-def admin_delete_product(product_id: int, db: Session = Depends(get_db)):
-    guitar = db.query(Guitar).filter(Guitar.id == product_id).first()
-    if guitar:
-        db.delete(guitar)
-        db.commit()
-        return {"message": "Product deleted successfully", "success": True}
-    return {"message": "Product not found", "success": False}
-
-
-# ADMIN - UPDATE PRODUCT
-@app.put("/admin/products/{product_id}")
-def admin_update_product(product_id: int, product: UpdateProduct, db: Session = Depends(get_db)):
-    guitar = db.query(Guitar).filter(Guitar.id == product_id).first()
-    if guitar:
-        if product.name is not None: guitar.name = product.name
-        if product.price is not None: guitar.price = product.price
-        if product.quantity is not None: guitar.quantity = product.quantity
-        if product.category is not None: guitar.category = product.category
-        if product.description is not None: guitar.description = product.description
-        if product.brand is not None: guitar.brand = product.brand
-        db.commit()
-        db.refresh(guitar)
-        return {"message": "Product updated successfully", "success": True, "product": {"id": guitar.id, "name": guitar.name, "category": guitar.category, "price": guitar.price, "quantity": guitar.quantity, "image": guitar.image, "description": guitar.description, "brand": guitar.brand, "year": guitar.year}}
-    return {"message": "Product not found", "success": False}
-
-
-# ADMIN - ADD NEW PRODUCT
-@app.post("/admin/products")
+@app.post("/admin/products", tags=["Admin"])
 def admin_create_product(product: CreateProduct, db: Session = Depends(get_db)):
     new_product = Guitar(
         name=product.name, price=product.price, quantity=product.quantity,
@@ -253,86 +364,138 @@ def admin_create_product(product: CreateProduct, db: Session = Depends(get_db)):
     db.add(new_product)
     db.commit()
     db.refresh(new_product)
-    return {"message": "Product created successfully", "success": True, "product": {"id": new_product.id, "name": new_product.name, "category": new_product.category, "price": new_product.price, "quantity": new_product.quantity, "image": new_product.image, "description": new_product.description, "brand": new_product.brand, "year": new_product.year}}
+    logger.info(f"Product created: {new_product.name} (id={new_product.id})")
+    return {"message": "Product created successfully", "success": True, "product": guitar_dict(new_product)}
 
 
-# ADMIN - MARK AS SOLD OUT
-@app.put("/admin/products/{product_id}/soldout")
+@app.put("/admin/products/{product_id}", tags=["Admin"])
+def admin_update_product(product_id: int, product: UpdateProduct, db: Session = Depends(get_db)):
+    guitar = db.query(Guitar).filter(Guitar.id == product_id).first()
+    if not guitar:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    if product.name        is not None: guitar.name        = product.name
+    if product.price       is not None: guitar.price       = product.price
+    if product.quantity    is not None: guitar.quantity    = product.quantity
+    if product.category    is not None: guitar.category    = product.category
+    if product.description is not None: guitar.description = product.description
+    if product.brand       is not None: guitar.brand       = product.brand
+
+    db.commit()
+    db.refresh(guitar)
+    return {"message": "Product updated successfully", "success": True, "product": guitar_dict(guitar)}
+
+
+@app.delete("/admin/products/{product_id}", tags=["Admin"])
+def admin_delete_product(product_id: int, db: Session = Depends(get_db)):
+    guitar = db.query(Guitar).filter(Guitar.id == product_id).first()
+    if not guitar:
+        raise HTTPException(status_code=404, detail="Product not found")
+    db.delete(guitar)
+    db.commit()
+    logger.info(f"Product deleted: id={product_id}")
+    return {"message": "Product deleted successfully", "success": True}
+
+
+@app.put("/admin/products/{product_id}/soldout", tags=["Admin"])
 def mark_soldout(product_id: int, db: Session = Depends(get_db)):
     guitar = db.query(Guitar).filter(Guitar.id == product_id).first()
-    if guitar:
-        guitar.quantity = 0
-        db.commit()
-        db.refresh(guitar)
-        return {"message": "Product marked as sold out", "success": True, "product": {"id": guitar.id, "name": guitar.name, "category": guitar.category, "price": guitar.price, "quantity": guitar.quantity, "image": guitar.image, "description": guitar.description, "brand": guitar.brand, "year": guitar.year}}
-    return {"message": "Product not found", "success": False}
+    if not guitar:
+        raise HTTPException(status_code=404, detail="Product not found")
+    guitar.quantity = 0
+    db.commit()
+    db.refresh(guitar)
+    return {"message": "Product marked as sold out", "success": True, "product": guitar_dict(guitar)}
 
 
-# PRODUCTS
-@app.get("/products")
+# --------------------
+# Products
+# --------------------
+
+@app.get("/products", tags=["Products"])
 def get_products(db: Session = Depends(get_db)):
-    guitars = db.query(Guitar).all()
-    return [{"id": g.id, "name": g.name, "category": g.category, "price": g.price, "quantity": g.quantity, "image": g.image, "description": g.description, "brand": g.brand, "year": g.year} for g in guitars]
+    return [guitar_dict(g) for g in db.query(Guitar).all()]
 
 
-@app.get("/products/{product_id}")
+@app.get("/products/{product_id}", tags=["Products"])
 def get_product(product_id: int, db: Session = Depends(get_db)):
     guitar = db.query(Guitar).filter(Guitar.id == product_id).first()
-    if guitar:
-        return {"id": guitar.id, "name": guitar.name, "category": guitar.category, "price": guitar.price, "quantity": guitar.quantity, "image": guitar.image, "description": guitar.description, "brand": guitar.brand, "year": guitar.year}
-    return {"message": "Product not found"}
+    if not guitar:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return guitar_dict(guitar)
 
 
-@app.get("/products/category/{category}")
+@app.get("/products/category/{category}", tags=["Products"])
 def get_products_by_category(category: str, db: Session = Depends(get_db)):
-    guitars = db.query(Guitar).filter(Guitar.category.ilike(category)).all()
-    return [{"id": g.id, "name": g.name, "category": g.category, "price": g.price, "quantity": g.quantity, "image": g.image, "description": g.description, "brand": g.brand, "year": g.year} for g in guitars]
+    guitars = db.query(Guitar).filter(Guitar.category.ilike(f"%{category}%")).all()
+    return [guitar_dict(g) for g in guitars]
 
 
-# CHECKOUT
-@app.post("/checkout")
+# --------------------
+# Checkout
+# --------------------
+
+@app.post("/checkout", tags=["Orders"])
 def checkout(checkout_data: Checkout, db: Session = Depends(get_db)):
-    total_price = 0
-    order_items = []
+    if not checkout_data.cart_items:
+        raise HTTPException(status_code=400, detail="Cart is empty")
+
     try:
+        # Validate stock first (before any mutations)
         for cart_item in checkout_data.cart_items:
             guitar = db.query(Guitar).filter(Guitar.id == cart_item.product_id).first()
             if not guitar:
-                raise HTTPException(status_code=404, detail=f"Product {cart_item.product_id} not found")
+                raise HTTPException(status_code=404, detail=f"Product id={cart_item.product_id} not found")
+            if cart_item.quantity <= 0:
+                raise HTTPException(status_code=400, detail=f"Invalid quantity for product id={cart_item.product_id}")
             if guitar.quantity < cart_item.quantity:
-                raise HTTPException(status_code=400, detail=f"Insufficient stock for {guitar.name}")
+                raise HTTPException(status_code=400, detail=f"Insufficient stock for '{guitar.name}' (available: {guitar.quantity})")
+
+        # Process order
+        total_price = 0.0
+        order_items = []
 
         for cart_item in checkout_data.cart_items:
             guitar = db.query(Guitar).filter(Guitar.id == cart_item.product_id).first()
             guitar.quantity -= cart_item.quantity
-            total_price += guitar.price * cart_item.quantity
+            subtotal = round(guitar.price * cart_item.quantity, 2)
+            total_price += subtotal
             order_items.append({
                 "product_id": cart_item.product_id,
                 "name": guitar.name,
                 "price": guitar.price,
                 "quantity": cart_item.quantity,
-                "subtotal": guitar.price * cart_item.quantity
+                "subtotal": subtotal
             })
 
-        order = Order(user_id=checkout_data.user_id, total=total_price)
+        order = Order(user_id=checkout_data.user_id, total=round(total_price, 2))
         db.add(order)
         db.flush()
 
         for item in order_items:
-            order_item = OrderItem(
-                order_id=order.id, product_id=item["product_id"],
-                name=item["name"], price=item["price"],
-                quantity=item["quantity"], subtotal=item["subtotal"]
-            )
-            db.add(order_item)
+            db.add(OrderItem(
+                order_id=order.id,
+                product_id=item["product_id"],
+                name=item["name"],
+                price=item["price"],
+                quantity=item["quantity"],
+                subtotal=item["subtotal"]
+            ))
 
         db.commit()
         db.refresh(order)
+        logger.info(f"Order placed: id={order.id}, user_id={order.user_id}, total={order.total}")
 
         return {
             "message": "Order placed successfully",
             "success": True,
-            "order": {"id": order.id, "user_id": order.user_id, "items": order_items, "total": order.total, "status": order.status}
+            "order": {
+                "id": order.id,
+                "user_id": order.user_id,
+                "items": order_items,
+                "total": order.total,
+                "status": order.status
+            }
         }
 
     except HTTPException:
@@ -340,66 +503,67 @@ def checkout(checkout_data: Checkout, db: Session = Depends(get_db)):
         raise
     except Exception as e:
         db.rollback()
+        logger.error(f"Checkout error: {e}")
         raise HTTPException(status_code=500, detail=f"Checkout failed: {str(e)}")
 
 
-# ORDERS
-@app.get("/orders/{user_id}")
+# --------------------
+# Orders
+# --------------------
+
+@app.get("/orders/{user_id}", tags=["Orders"])
 def get_user_orders(user_id: int, db: Session = Depends(get_db)):
     orders = db.query(Order).filter(Order.user_id == user_id).all()
     result = []
     for order in orders:
         items = db.query(OrderItem).filter(OrderItem.order_id == order.id).all()
-        result.append({
-            "id": order.id,
-            "user_id": order.user_id,
-            "items": [{"product_id": i.product_id, "name": i.name, "price": i.price, "quantity": i.quantity, "subtotal": i.subtotal} for i in items],
-            "total": order.total,
-            "status": order.status
-        })
+        result.append(order_dict(order, items))
     return result
 
 
-# ITEMS (legacy)
-@app.get("/list-items")
+# --------------------
+# Legacy Item Routes
+# --------------------
+
+@app.get("/list-items", tags=["Legacy"])
 def list_items(db: Session = Depends(get_db)):
-    guitars = db.query(Guitar).all()
-    return [{"id": g.id, "name": g.name, "category": g.category, "price": g.price, "quantity": g.quantity, "image": g.image, "description": g.description, "brand": g.brand, "year": g.year} for g in guitars]
+    return [guitar_dict(g) for g in db.query(Guitar).all()]
 
 
-@app.post("/create-item")
+@app.post("/create-item", tags=["Legacy"])
 def create_item(item: CreateItem, db: Session = Depends(get_db)):
     new_item = Guitar(
         name=item.name, price=item.price, quantity=item.quantity,
-        category="Custom", image="🎸", description="Custom guitar", brand="Custom", year="2024"
+        category="Custom", image="🎸", description="Custom guitar",
+        brand="Custom", year="2024"
     )
     db.add(new_item)
     db.commit()
     db.refresh(new_item)
-    return {"id": new_item.id, "name": new_item.name, "category": new_item.category, "price": new_item.price, "quantity": new_item.quantity, "image": new_item.image, "description": new_item.description, "brand": new_item.brand, "year": new_item.year}
+    return guitar_dict(new_item)
 
 
-@app.put("/update-item/{item_id}")
+@app.put("/update-item/{item_id}", tags=["Legacy"])
 def update_item(item_id: int, item: UpdateItem, db: Session = Depends(get_db)):
     guitar = db.query(Guitar).filter(Guitar.id == item_id).first()
-    if guitar:
-        if item.name is not None: guitar.name = item.name
-        if item.price is not None: guitar.price = item.price
-        if item.quantity is not None: guitar.quantity = item.quantity
-        db.commit()
-        db.refresh(guitar)
-        return {"message": "Item updated successfully", "item": {"id": guitar.id, "name": guitar.name, "category": guitar.category, "price": guitar.price, "quantity": guitar.quantity, "image": guitar.image, "description": guitar.description, "brand": guitar.brand, "year": guitar.year}}
-    raise HTTPException(status_code=404, detail=f"Item with id {item_id} not found")
+    if not guitar:
+        raise HTTPException(status_code=404, detail=f"Item with id={item_id} not found")
+    if item.name     is not None: guitar.name     = item.name
+    if item.price    is not None: guitar.price    = item.price
+    if item.quantity is not None: guitar.quantity = item.quantity
+    db.commit()
+    db.refresh(guitar)
+    return {"message": "Item updated successfully", "item": guitar_dict(guitar)}
 
 
-@app.delete("/delete-item/{item_id}")
+@app.delete("/delete-item/{item_id}", tags=["Legacy"])
 def delete_item(item_id: int, db: Session = Depends(get_db)):
     guitar = db.query(Guitar).filter(Guitar.id == item_id).first()
-    if guitar:
-        db.delete(guitar)
-        db.commit()
-        return {"message": "Item deleted successfully", "item": {"id": guitar.id, "name": guitar.name, "category": guitar.category, "price": guitar.price, "quantity": guitar.quantity, "image": guitar.image, "description": guitar.description, "brand": guitar.brand, "year": guitar.year}}
-    return {"message": "Item not found"}
+    if not guitar:
+        raise HTTPException(status_code=404, detail=f"Item with id={item_id} not found")
+    db.delete(guitar)
+    db.commit()
+    return {"message": "Item deleted successfully"}
 
 
 # --------------------

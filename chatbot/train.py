@@ -1,19 +1,15 @@
 import json
-import random
 import pickle
-import nltk
+import os
+
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.linear_model import LogisticRegression
 
-nltk.download('punkt')  
-
-# located the intents.json file:  
-import os
+# Load intents.json
 base_path = os.path.dirname(__file__)
 file_path = os.path.join(base_path, "intents.json")
 
 with open(file_path) as file:
-
     data = json.load(file)
 
 texts = []
