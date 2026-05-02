@@ -2,6 +2,8 @@ from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from pathlib import Path
+import json
 import uvicorn
 import logging
 from sqlalchemy import func
@@ -53,6 +55,35 @@ except Exception as e:
 
 from contextlib import asynccontextmanager
 
+
+def _seed_catalog_from_json_if_empty(db: Session) -> None:
+    """Load demo guitars from database.json when the catalog has no rows."""
+    if db.query(Guitar).first() is not None:
+        return
+    json_path = Path(__file__).resolve().parent / "database.json"
+    if not json_path.is_file():
+        logger.warning("database.json not found; catalog will stay empty.")
+        return
+    with open(json_path, encoding="utf-8") as f:
+        data = json.load(f)
+    guitars = data.get("guitars") or []
+    for g in guitars:
+        db.add(
+            Guitar(
+                name=g["name"],
+                category=g["category"],
+                price=float(g["price"]),
+                quantity=int(g["quantity"]),
+                image=g.get("image") or "🎸",
+                description=g.get("description") or "",
+                brand=g.get("brand") or "",
+                year=str(g.get("year") or "2024"),
+            )
+        )
+    db.commit()
+    logger.info("✅ Seeded %d demo guitars from database.json", len(guitars))
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Initialize DB tables on startup
@@ -72,9 +103,10 @@ async def lifespan(app: FastAPI):
                     db.add(default_admin)
                     db.commit()
                     logger.info("✅ Default admin created: admin@guitar.com / admin123")
+                _seed_catalog_from_json_if_empty(db)
             except Exception as seed_err:
                 db.rollback()
-                logger.error(f"❌ Admin seeding failed: {seed_err}")
+                logger.error(f"❌ Startup DB seeding failed: {seed_err}")
             finally:
                 db.close()
         except Exception as e:

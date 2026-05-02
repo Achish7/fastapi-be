@@ -1,25 +1,31 @@
 from sqlalchemy import create_engine, Column, Integer, String, Float, Text, ForeignKey, DateTime
 from sqlalchemy.orm import sessionmaker, relationship, declarative_base
 from datetime import datetime
+from pathlib import Path
 import os
 import logging
 
 logger = logging.getLogger(__name__)
 
-# Use PostgreSQL database
-# DATABASE_URL can be set via environment variable
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://postgres:admin123@localhost:5432/guitar_store"  # PostgreSQL connection
-)
+# Default: SQLite file next to this module (no PostgreSQL required for local dev).
+# Override with DATABASE_URL, e.g. postgresql://user:pass@localhost:5432/guitar_store
+_BASE_DIR = Path(__file__).resolve().parent
+_DEFAULT_SQLITE = "sqlite:///" + str(_BASE_DIR / "guitar_store.db").replace("\\", "/")
 
-# Create engine
-engine = create_engine(
-    DATABASE_URL,
-    pool_pre_ping=True,        # Test connections before using them
-    pool_recycle=300,          # Recycle connections every 5 minutes
-    connect_args={"connect_timeout": 5}  # Fail fast if DB is unreachable
-)
+DATABASE_URL = os.getenv("DATABASE_URL", _DEFAULT_SQLITE)
+
+if DATABASE_URL.startswith("sqlite"):
+    engine = create_engine(
+        DATABASE_URL,
+        connect_args={"check_same_thread": False},
+    )
+else:
+    engine = create_engine(
+        DATABASE_URL,
+        pool_pre_ping=True,
+        pool_recycle=300,
+        connect_args={"connect_timeout": 5},
+    )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
