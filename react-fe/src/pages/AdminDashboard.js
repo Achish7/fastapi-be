@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import API_URL from "../config/api";
 import { Package, ClipboardList, TrendingUp, Users, Music2, ArrowRight } from "lucide-react";
 import LoadingSpinner from "../components/LoadingSpinner";
 
@@ -15,7 +16,7 @@ export default function AdminDashboard({ onNavigate }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios.get("http://localhost:8000/admin/stats")
+    axios.get(`${API_URL}/admin/stats`)
       .then(({ data }) => { setStats(data); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);

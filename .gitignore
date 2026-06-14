@@ -2,9 +2,12 @@
 # frontend
 react-fe/node_modules/
 react-fe/dist/
+react-fe/build/
 
 # backend
 venv/
+.venv/
 __pycache__/
+app/__pycache__/
 *.pyc
 .env

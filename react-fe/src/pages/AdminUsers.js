@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import API_URL from "../config/api";
 import { Users, UserX } from "lucide-react";
 import LoadingSpinner from "../components/LoadingSpinner";
 import EmptyState from "../components/EmptyState";
@@ -9,7 +10,7 @@ export default function AdminUsers() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios.get("http://localhost:8000/admin/stats")
+    axios.get(`${API_URL}/admin/stats`)
       .then(({ data }) => { setStats(data); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);

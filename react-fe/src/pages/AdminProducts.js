@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import API_URL from "../config/api";
 import { Plus, Pencil, Trash2, AlertCircle, Music2, X } from "lucide-react";
 import LoadingSpinner from "../components/LoadingSpinner";
 
@@ -15,7 +16,7 @@ export default function AdminProducts() {
   useEffect(() => { fetchProducts(); }, []);
 
   const fetchProducts = () => {
-    axios.get("http://localhost:8000/admin/products")
+    axios.get(`${API_URL}/admin/products`)
       .then(({ data }) => { setProducts(data); setLoading(false); })
       .catch(() => setLoading(false));
   };
@@ -32,12 +33,12 @@ export default function AdminProducts() {
       quantity: parseInt(formData.quantity),
     };
     if (editingId) {
-      axios.put(`http://localhost:8000/admin/products/${editingId}`, payload)
+      axios.put(`${API_URL}/admin/products/${editingId}`, payload)
         .then(({ data }) => {
           if (data.success) { setProducts(ps => ps.map(p => p.id === editingId ? data.product : p)); resetForm(); }
         }).catch(() => alert("Failed to update product"));
     } else {
-      axios.post("http://localhost:8000/admin/products", { ...payload, image: "🎸", year: String(new Date().getFullYear()) })
+      axios.post(`${API_URL}/admin/products`, { ...payload, image: "🎸", year: String(new Date().getFullYear()) })
         .then(({ data }) => {
           if (data.success) { setProducts(ps => [...ps, data.product]); resetForm(); }
         }).catch(() => alert("Failed to add product"));
@@ -55,14 +56,14 @@ export default function AdminProducts() {
 
   const handleDelete = id => {
     if (!window.confirm("Delete this product?")) return;
-    axios.delete(`http://localhost:8000/admin/products/${id}`)
+    axios.delete(`${API_URL}/admin/products/${id}`)
       .then(({ data }) => { if (data.success) setProducts(ps => ps.filter(p => p.id !== id)); })
       .catch(() => alert("Failed to delete"));
   };
 
   const handleSoldOut = id => {
     if (!window.confirm("Mark as sold out?")) return;
-    axios.put(`http://localhost:8000/admin/products/${id}/soldout`)
+    axios.put(`${API_URL}/admin/products/${id}/soldout`)
       .then(({ data }) => { if (data.success) setProducts(ps => ps.map(p => p.id === id ? data.product : p)); })
       .catch(() => alert("Failed to mark as sold out"));
   };

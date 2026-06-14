@@ -1,5 +1,6 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
+import API_URL from "./config/api";
 import "./App.css";
 import { ToastProvider } from "./components/Toast";
 import { Music2, LayoutDashboard, Package, ClipboardList, Users, LogOut } from "lucide-react";
@@ -57,7 +58,7 @@ function App() {
 
   const fetchProducts = () => {
     axios
-      .get("http://localhost:8000/products")
+      .get(`${API_URL}/products`)
       .then(({ data }) => setProducts(data))
       .catch((error) => console.error("Error fetching products:", error));
   };
@@ -70,7 +71,7 @@ function App() {
 
   const handleSignUp = (email, username, password) => {
     axios
-      .post("http://localhost:8000/signup", { email, username, password })
+      .post(`${API_URL}/signup`, { email, username, password })
       .then(({ data }) => {
         if (data.success) {
           setCurrentUser(data.user);
@@ -87,7 +88,7 @@ function App() {
 
   const handleLogin = (email, password) => {
     axios
-      .post("http://localhost:8000/login", { email, password })
+      .post(`${API_URL}/login`, { email, password })
       .then(({ data }) => {
         if (data.success) {
           setCurrentUser(data.user);

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { MapPin, Mail, CreditCard, Loader2, CheckCircle, User } from "lucide-react";
+import API_URL from "../config/api";
 
 export default function Checkout({ cartItems, userId, onComplete }) {
   const [formData, setFormData] = useState({
@@ -25,7 +26,7 @@ export default function Checkout({ cartItems, userId, onComplete }) {
     }
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:8000/checkout", {
+      const res = await fetch(`${API_URL}/checkout`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

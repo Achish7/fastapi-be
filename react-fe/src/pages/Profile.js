@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import API_URL from "../config/api";
 import { ClipboardList, PackageOpen, CheckCircle } from "lucide-react";
 import LoadingSpinner from "../components/LoadingSpinner";
 import EmptyState from "../components/EmptyState";
@@ -9,7 +10,7 @@ export default function Profile({ userId }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios.get(`http://localhost:8000/orders/${userId}`)
+    axios.get(`${API_URL}/orders/${userId}`)
       .then(({ data }) => { setOrders(data); setLoading(false); })
       .catch(() => setLoading(false));
   }, [userId]);

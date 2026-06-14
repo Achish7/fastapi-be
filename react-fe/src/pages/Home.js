@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Star, Truck, ShieldCheck, Headphones, ArrowRight } from "lucide-react";
+import API_URL from "../config/api";
 
 // ─── Chatbot Component ───────────────────────────────────────────────────────
 function Chatbot() {
@@ -22,7 +23,7 @@ function Chatbot() {
     setInput("");
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:8000/chat", {
+      const res = await fetch(`${API_URL}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: trimmed }),

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios";
+import API_URL from "../config/api";
 import { Mail, Lock, ShieldCheck, Eye, EyeOff } from "lucide-react";
 
 export default function AdminAuth({ onAdminLogin }) {
@@ -13,7 +14,7 @@ export default function AdminAuth({ onAdminLogin }) {
     e.preventDefault();
     setError("");
     setLoading(true);
-    axios.post("http://localhost:8000/admin/login", { email, password })
+    axios.post(`${API_URL}/admin/login`, { email, password })
       .then(({ data }) => {
         if (data.success) onAdminLogin(data.admin);
         else setError(data.message);
